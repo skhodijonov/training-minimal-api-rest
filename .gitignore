@@ -1,0 +1,6 @@
+.idea
+.
+/REST API CRUD/bin/
+/REST API CRUD/obj/
+*.sln
+*.sln.DotSettings.user
