@@ -1,6 +1,7 @@
 .idea
-.
+.git
 /REST API CRUD/bin/
 /REST API CRUD/obj/
+/REST API CRUD/uploads
 *.sln
 *.sln.DotSettings.user

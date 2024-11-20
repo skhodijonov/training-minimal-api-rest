@@ -16,6 +16,7 @@ app.Run(async (context) =>
     var response = context.Response;
     var request = context.Request;
     var path = request.Path;
+    var filePath = $"html/{path}.html";
     //string expressionForNumber = "^/api/users/([0-9]+)$";   // если id представляет число
  
     // 2e752824-1657-4c7f-844b-6ec2e168e99c
@@ -42,6 +43,33 @@ app.Run(async (context) =>
     {
         string? id = path.Value?.Split("/")[3];
         await DeletePerson(id, response);
+    }
+    else if (request.Path == "/upload" && request.Method=="POST")
+    {
+        IFormFileCollection files = request.Form.Files;
+        // путь к папке, где будут храниться файлы
+        var uploadPath = $"{Directory.GetCurrentDirectory()}/uploads";
+        Console.WriteLine(uploadPath);
+        // создаем папку для хранения файлов
+        Directory.CreateDirectory(uploadPath);
+ 
+        foreach (var file in files)
+        {
+            // путь к папке uploads
+            string fullPath = $"{uploadPath}/{file.FileName}";
+            
+            // сохраняем файл в папку uploads
+            using (var fileStream = new FileStream(fullPath, FileMode.Create))
+            {
+                await file.CopyToAsync(fileStream);
+            }
+        }
+        await response.WriteAsync("Files uploaded");
+    }
+    else if (File.Exists(filePath))
+    {
+        
+        await response.SendFileAsync(filePath);
     }
     else
     {
