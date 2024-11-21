@@ -185,10 +185,10 @@ async Task CreatePerson(HttpResponse response, HttpRequest request)
             throw new Exception("Некорректные данные");
         }
     }
-    catch (Exception)
+    catch (Exception ex)
     {
         response.StatusCode = 400;
-        await response.WriteAsJsonAsync(new { message = "Некорректные данные" });
+        await response.WriteAsJsonAsync(new { message = ex.Message, error = ex.ToString() });
     }
 }
 
@@ -239,7 +239,18 @@ void About(IApplicationBuilder appBuilder)
 
 public class Person
 {
+    private int _age;
     public string Id { get; set; } = "";
     public string Name { get; set; } = "";
-    public int Age { get; set; }
+    public int Age
+    {
+        get => _age;
+        set
+        {
+            if (value < 0 || value > 120)
+                throw new Exception("Возраст должен быть в диапазоне от 0 до 120");
+            else
+                _age = value;
+        }
+    }
 }
