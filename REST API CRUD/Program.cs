@@ -11,7 +11,7 @@ List<Person> users = new List<Person>
 var builder = WebApplication.CreateBuilder();
 var app = builder.Build();
 
-app.Use(async(context, next) =>
+app.Use(async (context, next) =>
 {
     string? path = context.Request.Path.Value?.ToLower();
     if (path == "/date")
@@ -39,6 +39,7 @@ app.UseWhen(
         // отправляем ответ
         appBuilder.Run(async context => { await context.Response.WriteAsync($"Time: {time}"); });
     });
+
 app.MapWhen(
     context => context.Request.Path == "/time2", // условие: если путь запроса "/time"
     appBuilder => appBuilder.Run(async context =>
@@ -47,6 +48,15 @@ app.MapWhen(
         await context.Response.WriteAsync($"current time: {time}");
     })
 );
+
+app.Map("/home", appBuilder =>
+{
+    appBuilder.Map("/index", Index); // middleware для "/home/index"
+    appBuilder.Map("/about", About); // middleware для "/home/about"
+    // middleware для "/home"
+    appBuilder.Run(async (context) => await context.Response.WriteAsync("Home Page"));
+});
+
 app.Run(async (context) =>
 {
     var response = context.Response;
@@ -215,6 +225,16 @@ async Task UpdatePerson(HttpResponse response, HttpRequest request)
         response.StatusCode = 400;
         await response.WriteAsJsonAsync(new { message = "Некорректные данные" });
     }
+}
+
+void Index(IApplicationBuilder appBuilder)
+{
+    appBuilder.Run(async context => await context.Response.WriteAsync("Index Page"));
+}
+
+void About(IApplicationBuilder appBuilder)
+{
+    appBuilder.Run(async context => await context.Response.WriteAsync("About Page"));
 }
 
 public class Person
