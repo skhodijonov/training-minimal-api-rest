@@ -1,16 +1,52 @@
 using System.Text.RegularExpressions;
- 
+
 // начальные данные
-List<Person> users = new List<Person> 
-{ 
+List<Person> users = new List<Person>
+{
     new() { Id = Guid.NewGuid().ToString(), Name = "Tom", Age = 37 },
     new() { Id = Guid.NewGuid().ToString(), Name = "Bob", Age = 41 },
     new() { Id = Guid.NewGuid().ToString(), Name = "Sam", Age = 24 }
 };
- 
+
 var builder = WebApplication.CreateBuilder();
 var app = builder.Build();
- 
+
+app.Use(async(context, next) =>
+{
+    string? path = context.Request.Path.Value?.ToLower();
+    if (path == "/date")
+    {
+        await context.Response.WriteAsync($"Date: {DateTime.Now.ToShortDateString()}");
+    }
+    else
+    {
+        await next.Invoke();
+    }
+});
+
+app.UseWhen(
+    context => context.Request.Path == "/time1", // если путь запроса "/time"
+    appBuilder =>
+    {
+        var time = DateTime.Now.ToShortTimeString();
+        // логгируем данные - выводим на консоль приложения
+        appBuilder.Use(async (context, next) =>
+        {
+            Console.WriteLine($"Time: {time}");
+            await next(); // вызываем следующий middleware
+        });
+
+        // отправляем ответ
+        appBuilder.Run(async context => { await context.Response.WriteAsync($"Time: {time}"); });
+    });
+app.MapWhen(
+    context => context.Request.Path == "/time2", // условие: если путь запроса "/time"
+    appBuilder => appBuilder.Run(async context =>
+    {
+        var time = DateTime.Now.ToShortTimeString();
+        await context.Response.WriteAsync($"current time: {time}");
+    })
+);
 app.Run(async (context) =>
 {
     var response = context.Response;
@@ -18,12 +54,12 @@ app.Run(async (context) =>
     var path = request.Path;
     var filePath = $"html/{path}.html";
     //string expressionForNumber = "^/api/users/([0-9]+)$";   // если id представляет число
- 
+
     // 2e752824-1657-4c7f-844b-6ec2e168e99c
     string expressionForGuid = @"^/api/users/\w{8}-\w{4}-\w{4}-\w{4}-\w{12}$";
-    if (path == "/api/users" && request.Method=="GET")
+    if (path == "/api/users" && request.Method == "GET")
     {
-        await GetAllPeople(response); 
+        await GetAllPeople(response);
     }
     else if (Regex.IsMatch(path, expressionForGuid) && request.Method == "GET")
     {
@@ -44,7 +80,7 @@ app.Run(async (context) =>
         string? id = path.Value?.Split("/")[3];
         await DeletePerson(id, response);
     }
-    else if (request.Path == "/upload" && request.Method=="POST")
+    else if (request.Path == "/upload" && request.Method == "POST")
     {
         IFormFileCollection files = request.Form.Files;
         // путь к папке, где будут храниться файлы
@@ -52,23 +88,23 @@ app.Run(async (context) =>
         Console.WriteLine(uploadPath);
         // создаем папку для хранения файлов
         Directory.CreateDirectory(uploadPath);
- 
+
         foreach (var file in files)
         {
             // путь к папке uploads
             string fullPath = $"{uploadPath}/{file.FileName}";
-            
+
             // сохраняем файл в папку uploads
             using (var fileStream = new FileStream(fullPath, FileMode.Create))
             {
                 await file.CopyToAsync(fileStream);
             }
         }
+
         await response.WriteAsync("Files uploaded");
     }
     else if (File.Exists(filePath))
     {
-        
         await response.SendFileAsync(filePath);
     }
     else
@@ -77,14 +113,15 @@ app.Run(async (context) =>
         await response.SendFileAsync("html/index.html");
     }
 });
- 
+
 app.Run();
- 
+
 // получение всех пользователей
 async Task GetAllPeople(HttpResponse response)
 {
     await response.WriteAsJsonAsync(users);
 }
+
 // получение одного пользователя по id
 async Task GetPerson(string? id, HttpResponse response)
 {
@@ -100,7 +137,7 @@ async Task GetPerson(string? id, HttpResponse response)
         await response.WriteAsJsonAsync(new { message = "Пользователь не найден" });
     }
 }
- 
+
 async Task DeletePerson(string? id, HttpResponse response)
 {
     // получаем пользователя по id
@@ -118,7 +155,7 @@ async Task DeletePerson(string? id, HttpResponse response)
         await response.WriteAsJsonAsync(new { message = "Пользователь не найден" });
     }
 }
- 
+
 async Task CreatePerson(HttpResponse response, HttpRequest request)
 {
     try
@@ -144,7 +181,7 @@ async Task CreatePerson(HttpResponse response, HttpRequest request)
         await response.WriteAsJsonAsync(new { message = "Некорректные данные" });
     }
 }
- 
+
 async Task UpdatePerson(HttpResponse response, HttpRequest request)
 {
     try
@@ -179,6 +216,7 @@ async Task UpdatePerson(HttpResponse response, HttpRequest request)
         await response.WriteAsJsonAsync(new { message = "Некорректные данные" });
     }
 }
+
 public class Person
 {
     public string Id { get; set; } = "";
